@@ -1,0 +1,259 @@
+■■■ 오라클 잡 스케줄러(JOB SCHEDULER) ■■■
+
+○ 개요 
+   - 데이터베이스에서 쿼리나 프로시저 등을 활용하여
+     일정 주기별로(연, 월, 일, 시간 등)
+     원하는 작업을 자동으로 수행할 수 있도록 처리하는 객체
+     → 오라클 스케줄러(SCHEDULER), 잡(JOB)
+
+     ※ 오라클 10g 부터 지원 
+     
+     - 오라클에서 프로시저라든지 특정 테이블에 데이터를 적재하는 등 
+       일정 시간, 매일 또는 매달 실행하여 작업하는 경우가 종종 있음 
+       이와 같은 경우, 수동으로 특정 시간마다 등록하는 것이 아니라
+       오라클에서 일정 시간마다 반복적으로 실행하도록 할 수 있음 
+
+       - 스케줄러(SCHEDULER), 잡(JOB)에서 반복하는 실행문을 등록하는 것은
+         오라클 버전에 따라 크게 2가지 방법을 사용할 수 있음 
+
+○ 『ORACLE JOB』 vs. 『ORACLE SCHEDULER』
+
+    - 『ORACLE JOB』 은 PLSQL_BLOCK, STORED_PROCEDURE만 구동
+    - 오라클 10g 부터 『ORACLE SCHEDUER』를 지원 
+    - 『ORACLE SCHDULER』를 지원 
+    - 『ORACLE SCHEDULER』에서는 운영체제에 등록되는 SHELL 프로그램 등도 구동 가능 
+
+○ DBMS_JOB
+
+   - 특정 시간 및 간격으로 특정 작업을 수행 
+
+○ DBMS_SCHEDULER
+   - 복잡하고 정교한 수준의 스케줄 작업 가능
+
+○ DBMS_SCHEDULER의 장점
+
+   - GUI(EW)을 통한 관리가 쉬움 
+   - 모듈화된 스케줄 오브젝트를 통해 쉽게 공유할 수 있음(프로그램, 스케줄, 잡)
+   - 모든 스케줄 활동이 기록됨 
+   - TimeZone 이 지원됨
+   - (DatePump를 활용하여) 다른 데이터베이스 이동이 쉬움
+
+○ 오라클 스케줄러 등록을 위한 권한(추가 : SYS → SCOTT)
+
+   - GTANT CREATE ANY JDB TO 계정명;
+GTANT CREATE ANY JDB TO SCOTT;
+-- Grant을(를) 성공했습니다.
+
+   - GRANT EXECUTE ON DBMS_SCHEDULER TO 계정명;
+GRANT CREATE ANY JOB TO SCOTT;
+-- Grant을(를) 성공했습니다.
+
+  - GRANT EXECUTE ON DBMS_ISCHED TO 계정명;
+GRANT EXECUTE ON DBMS_ISCHED TO SCOTT;
+-- Grant을(를) 성공했습니다.
+
+  - GRANT CREATE JOB, MANAGE SCHEDULER TO 계정명;
+GRANT CREATE JOB, MANAGE SCHEDULER TO SCOTT;
+-- Grant을(를) 성공했습니다.
+
+○ 사용 절차(처리 순서)
+
+   1. 작동할 프로글매 등록 
+      : 스케줄러가 돌면서 실제로 구동될 프로그램을 등록함 
+   2. 스케줄 등록 
+      : 주기적으로 돌아갈 스케줄을 등록함 
+   3. 잡 등록 
+      : 실제 수행할 업무로, 스케줄과 프로글매을 명시해줌 
+
+   ※ 프로그램(PORGRAM)
+      - 실행 가능한 프로그램(Program)을 말함 
+      - DBMS_JOB 은 PL/SQL 블록, 저장 프로시저(Stored Procudure)만 가능 
+      - DBMS_SCHDULER는 외부 프로그램까지 사용 가능 
+        (PL/SQL 블록 저장 프로시저(Stored Procedure), 실행 파일(Executable, Unix Shell, windows 실행 파일 등)
+      - DBMS_SCHEDULER.CREATE_PROGRAM 프로시저를 통해 등록 가능하며 
+        [ALL/DBA/USER]_SCHEDULER_PROGRAMS 뷰를 통해 확인 가능 
+      - 스케줄링에 의해 실행되는 대상(프로그램 이름, 타입, Argument 갯수 등)
+
+   ※ 스케줄(SCHEDULER)
+      - 작업을 수행할 스케줄을 말함 
+      - 작업 시작 시각, 종료 시각, 간격 등을 지정할 수 있음 
+      - DBMS_JOB 에 비해 유연함 
+        ex) "FREQ=YEARLY; BYWONTH=4; BYWONTHDAY=15; BYHOUR=9; BYWIUTE=0; BYSECOND=0"
+             - 매년 5월 15일 9시 정각에 작업 수행 
+      - DBMS_SCHEDULER.CREATE_SCHEDULES 프로시저를 통해 등록할 수 있으며 
+        [ALL/DBA/USER]_SCHDULER_SCHEDULES 뷰를 통해 확인 가능
+ 
+   ※ 잡(JOB)
+      - 오라클에서 스케줄러를 통해 특정 작업을 수행할 때,
+        그 단위를 잡(JOB)라고 함 
+      - 주어진 프로그램과 스케줄러에 따라 수행할 작업을 말함(언제 무엇을)
+      - 명시적으로 생성된 프로그램과 스케줄을 이용할수 있고,
+        작업을 생성하면 암묵적인 프로그램과 스케줄을 생성할 수도 있음 
+      - DBMS_SCHEDULER.CREATE_JOB 프로시저를 통해 등록할 수 있으며 
+        [ALL/DBA/USER]_SCHEDULER_JOBS 뷰를 통해 확인 가능 
+      - 작업이 수행되면서 남게되는 로그 데이터는 
+        [ALL/DBA/USER]_SCHEDULER_JOB_LOG 뷰나 
+        [ALL/DBA/USER]_SCHEDULER_JOB_RUN+DETAILS 뷰를 통해 확인 가능 
+
+    ※ 잡 클래스(JOB CLASS)
+       - 작업의 공통 속성을 묶어서 만든 분류를 말함 
+       - Resource Consumer Group, Service, Logging, Level, Log History 의 속성을 조합하여 
+         하나의 클래스를 생성함 
+       - Resource Consumer Group 은 DBMS_RESOURCE_MANAGER 패키지를 통해 생성하며,
+         자원을 얼마나 많이 사용 가능하게 할 것인지를 지정 
+       - Service 는 작업이 특정 서비스에 대한 리소스 친화도(Resource Affinity)를 가지도록 지정함 
+         즉, Service 는 RAC 에서 클래스터 내의 여러 노드를 묶은 논리적인 그룹임 
+       - Logging Level 은 작업 실행에 대한 로그 데이터의 레벨을 지정함 
+       - Log History 는 로그 데이터를 얼마나 저장할지를 지정함 
+       - 같은 작업 클래스에 속하는 작업은 같은 속성을 고융하기 때문에 
+         관리 상의 편의성을 제공함 
+       - 하나의 JOB은 하나의 JOB CLASS 에만 소속됨 
+
+   ※ 윈도우(WINDOW)
+      - 특정 리소스 플랜 (Resource Plan)을 적용하는 시간 단위를 의미함 
+      - 리소스 플랜은 오라클이 자원을 관리하는 단위로 
+        작업의 종류에 따라 CPU 등의 자원을 얼마나 부여할지를 지정하는 역할을 함 
+        (윈도우를 지정하게 되면 해당 윈도우 안에서 실행되는 작업은 
+         윈도우 생성 시 지정한 리소스 플랜을 사용하게 됨)
+
+   ※ 체인(CHAIN)
+      - 프로그램의 집합을 의미함 
+      - 일련의 프로그램들을 순서대로 수행해야 할 때 사용함 
+      - 체인은 ORACLE 10g R2에서 추가된 기능임 
+      - 스케줄 작업과 RAC Instance 
+      - DBMS_JOB => 작업을 실행할 인스턴스 번호를 지정(하나의 노드로 지정하면 편의성 향상)
+      - DBMS_SCHEDULER => Instance_Stickness 라는 개념을 통해 보다 지능적으로 인스턴스를 할당 
+      - INSTANCE_STICKNESS => TRUE(DBMS_SCHEDULER.SET_ATTRIBUTE) 의미 
+      - 작업 수행 시 현재 가장 부하가 적은 인스턴스에 작업을 분배함 
+        이후 작업 수행 시에는 가능한 최초에 지정된 인스턴스에서 작업.
+      - 이와 같은 성격을 인스턴스 접착도라고 하며 리소스 친화도를 구현하는 방법 
+      - 최초 지정된 인스턴스가 다운되거나, 부하가 심해 작업을 수행할 수 없을 때 
+        다른 인스턴스에서 작업을 수행하게 됨
+      - INSTANCE_STICKNESS 속성 값이 FALSE 이면, 오라클은 인스턴스 순서대로 작업을 수행함 
+        즉, DBMS_JOB 패키지를 이용해 작업을 수행하되 
+        인스턴스 번호를 지정하지 않은 경우와 거의 같은 방식으로 작동함 
+
+○ 제거 
+   
+   1. 잡 제거 
+   2. 프로그램 제거 
+   3. 스케줄 제거 
+   
+   ※ JOB을 먼저 지우고 PROGRAM을 지움 
+      PROGRAM을 먼저 제거하게 되면 종속된 객체이기 때문에 에러 발생 
+      스케줄도 같은 방법으로 처리함 
+
+○ 오라클 스케줄러 명령 프로시저 
+  
+   - DBMS_SCHDULER.CREATE_PROGRAM
+     : 잡이 스케줄러의 설정대로 구동하며 
+       실제 동작하는 프로그램(외부 SHELL, SP, PLSQL_BOLCK 등)을 등록함 
+ 
+   - DBMS_SCHEDULER.CREATE_SCHEDULER
+     : 주기적으로 돌아갈 스케줄을 등록함 
+
+   - DBMS_SCHEDULER.CREATE_JOB
+     : 수행할 작업을 등록함 
+
+   - DBMS_SCHEDULER.DROP_JOB
+     : 스케줄을 삭제함 
+
+   - DBMS_SCHEDULER.ENABLE
+     : 스케줄을 시작함 
+
+   - DBMS_SCHEDULER.DISABLE
+     : 스케줄을 정지함 
+
+○ 오라클 잡 명령 프로시저 
+  
+   - DBMS_JOB_SUBMIT
+     : 잡을 등록함 
+
+   - DBMS_JOB.REMOVE
+     : 잡을 제거함 
+
+   - DBMS_JOB.CHANGE
+     : 잡의 FIELD를 변경함 
+
+   - DBMS.JOB.NEXT_DATE
+     : 잡의 다음 수행시간(자동으로 실행될 때)을 변경함 
+
+   - DBMS_JOB.INTERVAL
+     : 잡의 수행 반복 주기(CYCLE) 파라미터를 변경함 
+
+   - DBMS_JOB.WHAT
+     : 잡의 수행 업무로 등록된 객체(OBJECT)를 변경함 
+
+   - DBMS_JOB.RUN
+     : 잡을 수동으로 실행(현재 SESSION 에서 즉시 실행)함 
+
+   - DBMS_JOB.JOB_BROKEN
+     : 잡의 상태를 정상 또는 BROKEN 상태로 설정함 
+
+○ 등록 정보 확인 (스케줄러 관련 DBMS 조회 구문)
+
+   SELECT *
+   FROM USER_SCHEDULER_JOBS;   		-- 등록된 JOB
+
+   SELECT *
+   FROM USER_SCHEDULER_JOB_ARGS;  	-- JOB 의 ARGUMENTS
+
+   SELECT *
+   FROM USER_SCHEDULER_RUUNING_JOBS;	-- 구동중인(RUNNING) JOB 들의 정보 
+
+   SELECT *
+   FROM USER_SCHEDULER_JOB_LOG;		-- JOB의 LOG
+
+   SELCET *
+   FROM USER_SCHEDULER_JOB_RUN_DETAILS; -- JOB의 수행된 정보 및 에러 정보 
+
+   SELECT *
+   FROM USER_SCHEDULER_PROGRAMS; 	-- 등록된 PROGRAM
+
+   SELECT *
+   FROM USER_SCHEDULER_PROGRAM_ARGS;	-- PROGRAMS의 매개변수(ARGUMENTS)
+
+   SELECT *
+   FROM USER_SCHEDULER_SCHEDULES;	-- 등록된 스케줄러(SCHEDULER)
+
+○ INTERVAL 설정 방법(WHEN/ HOW MANY 에 대한 정의)
+
+   TYPE A. PL/SQL 표현 방법 (USING Pl/SQL EXPRESSION)
+     REPEAT_INTERVAL => 'SYSDATE+36/24'
+
+   TYPE B. 달력 표현 방법(USING CALEDAR EXPRESSION)
+     REPEAT_INTERVAL => 'FREQ=HOURLY; INTERVAL=4'
+     REPEAT_INTERVAL => 'FREQ=YEARLY; BYONTH=MAR,JUN,SEP,DEC; BYMONTHDAY=15'
+
+ex)
+
+'SYSDATE + 1'
+-- 메일(Execute daily)
+-- → 현재 시간으로부터 당므날 현재 시간에 실행
+--    즉, 현재 시간이 오후 3시면 매일 오후 3시에 실행
+
+'SYSDATE + 7'
+-- 일주일에 한번 (Execute once per week)
+
+'SYSDATE + 1/24'
+-- 한 시간에 한번 (Execute hourly)
+
+'SYSDATE + 10/1440'
+'SYSDATE + 1/2416'
+-- 10분에 한번(Execute every 10 min)
+
+'SYSDATE + 30/86400'
+-- 30초에 한 번(Excute every 30 sec)
+
+'SYSDATE + 1/1440'
+-- 1분에 한 번 
+
+NULL 
+-- 다시 실행하지 않음 (DO not re-execute)
+
+'TRUNC(SYSDATE) + 1 + 5 / 24'
+-- 매일 새벽 5시에 실행 
+
+'TRUNC(SYSDATE) + 22 / 24'
+-- 매일 밤 10시에 실행
+
